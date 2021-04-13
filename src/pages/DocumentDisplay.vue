@@ -4,7 +4,7 @@
   :class="{
     'q-pb-xl q-pl-xl q-pr-xl': disableDocumentControlBar,
     'q-pa-xl': !disableDocumentControlBar,
-    'hiddenFields': hideEmptyFields
+    'hiddenFields': (hideEmptyFields || retrieveFieldValue(currentData, 'finishedSwitch'))
     }"
   v-if="bluePrintData"
   >
@@ -108,11 +108,16 @@
       </div>
 
       <div
-        :class="`col-${field.sizing} q-mb-md`"
         v-for="field in bluePrintData.extraFields"
         :key="`${field.id}`"
         v-show="hasValueFieldFilter(field) || editMode"
-        >
+        :class="`
+          col-12
+          col-md-${determineSize_MD(field)}
+          col-lg-${determineSize_LG(field)}
+          col-xl-${determineSize_XL(field)}
+          q-mb-md
+        `">
 
           <Field_Break
           class="inputWrapper break"
@@ -769,6 +774,7 @@ export default class PageDocumentDisplay extends BaseClass {
       icon: this.bluePrintData.icon,
       editMode: true,
       isNew: true,
+      isFinished: false,
       hasEdits: false,
       url: `/project/display-content/${this.bluePrintData._id}/${uniqueID}`,
       extraFields: []
@@ -781,15 +787,20 @@ export default class PageDocumentDisplay extends BaseClass {
   categoryFieldFilter (currentFieldID: string) {
     const isCategory = this.retrieveFieldValue(this.currentData, "categorySwitch")
 
-    const ignoredList = ["breakDocumentSettings", "name", "documentColor", "documentBackgroundColor", "parentDoc", "order", "categorySwitch", "minorSwitch", "deadSwitch", "tags"]
-    return (((!isCategory && currentFieldID !== "categoryDescription") || ignoredList.includes(currentFieldID)) || (isCategory && currentFieldID === "categoryDescription"))
+    const ignoredList = ["breakDocumentSettings", "name", "documentColor", "documentBackgroundColor", "parentDoc", "order", "categorySwitch", "minorSwitch", "deadSwitch", "finishedSwitch", "tags"]
+    return (
+      (
+        (!isCategory && currentFieldID !== "categoryDescription") ||
+        ignoredList.includes(currentFieldID)
+      ) || (isCategory && currentFieldID === "categoryDescription")
+    )
   }
 
   /**
    * Checks if the field in question
    */
   hasValueFieldFilter (field: any) {
-    if (!this.hideEmptyFields) {
+    if (!this.hideEmptyFields && !this.retrieveFieldValue(this.currentData, "finishedSwitch")) {
       return true
     }
 
@@ -804,6 +815,40 @@ export default class PageDocumentDisplay extends BaseClass {
       return false
     }
     return true
+  }
+
+  /****************************************************************/
+  // RESPONSIVE COLLUMN STYLES
+  /****************************************************************/
+
+  determineSize_MD (field: I_ExtraFields) {
+    if (field.type === "break") {
+      return 12
+    }
+    if (field.sizing <= 6) {
+      return 6
+    }
+
+    return field.sizing
+  }
+
+  determineSize_LG (field: I_ExtraFields) {
+    if (field.type === "break") {
+      return 12
+    }
+
+    if (field.sizing <= 4) {
+      return 4
+    }
+
+    return field.sizing
+  }
+
+  determineSize_XL (field: I_ExtraFields) {
+    if (field.type === "break") {
+      return 12
+    }
+    return field.sizing
   }
 
   /****************************************************************/
@@ -835,7 +880,7 @@ export default class PageDocumentDisplay extends BaseClass {
   }
 
   /****************************************************************/
-  // `DOCUMENT COPY
+  // DOCUMENT COPY
   /****************************************************************/
   documentPass = null as unknown as I_OpenedDocument
 
